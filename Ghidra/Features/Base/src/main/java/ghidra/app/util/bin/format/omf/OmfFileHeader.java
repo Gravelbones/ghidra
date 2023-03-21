@@ -307,6 +307,7 @@ public class OmfFileHeader extends OmfRecord {
 		}
 		OmfFileHeader header = (OmfFileHeader) record;
 		OmfData lastDataBlock = null;
+		boolean seenComdat = false;
 
 		while (true) {
 			record = OmfRecord.readRecord(reader);
@@ -351,7 +352,7 @@ public class OmfFileHeader extends OmfRecord {
 				header.groups.add(group);
 			}
 			else if (record instanceof OmfFixupRecord fixuprec) {
-				if(lastDataBlock != null) {
+				if((lastDataBlock != null) || (seenComdat == false)) {
 					fixuprec.setDataBlock(lastDataBlock);
 					header.fixup.add(fixuprec);
 				}
@@ -359,6 +360,7 @@ public class OmfFileHeader extends OmfRecord {
 			else if (record instanceof OmfEnumeratedData enumheader) {
 				header.addEnumeratedBlock(enumheader);
 				lastDataBlock = enumheader;
+				seenComdat = false;
 			}
 			else if (record instanceof OmfIteratedData iterheader) {
 				if (iterheader.getSegmentIndex() <= 0 ||
@@ -368,9 +370,11 @@ public class OmfFileHeader extends OmfRecord {
 				OmfSegmentHeader segheader2 = header.segments.get(iterheader.getSegmentIndex() - 1);
 				segheader2.addIteratedData(iterheader);
 				lastDataBlock = iterheader;
+				seenComdat = false;
 			}
 			else if (record instanceof OmfUnsupportedRecord) {
 				if (record.getRecordType() == COMDAT) {
+					seenComdat = true;
 					lastDataBlock = null;
 				}
 				logRecord("Unsupported OMF record", record, log);
